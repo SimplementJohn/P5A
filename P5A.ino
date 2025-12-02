@@ -1,3 +1,5 @@
+//Version API Fonctionnelle 1.1
+
 #include <ArduinoJson.h>   // JSON
 #include <WiFi.h>          // WiFi ESP32
 #include <HTTPClient.h>    // HTTP client
@@ -21,8 +23,8 @@ String azimutSoleil    = "";
 String jsonSUN = "";
 
 // PARAMÈTRES WIFI
-const char* ssid     = "iPhone de Alexis";
-const char* password = "11223344";
+const char* ssid     = "iPhone de John";
+const char* password = "samuelpar";
 
 // MONITEUR SÉRIE
 int BAUDRATE = 9600;  // 115200 pour ESP32 (standard)
