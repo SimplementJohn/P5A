@@ -10,6 +10,7 @@ ESP32 project that tracks real-time sun position (azimuth & altitude) using le-s
 |------|-------------|
 | `P5A-API_WIFI.ino` | WiFi connection and GET API requests with solar data processing (azimuth, altitude) |
 | `P5A-MOTEUR.ino` | Stepper motor control test for dual-axis solar tracking system |
+| `P5A-HOURREQUEST.ino` | Ask for HOUR time RN |
 
 ### Support Files
 
