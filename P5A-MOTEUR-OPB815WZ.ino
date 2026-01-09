@@ -1,74 +1,100 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//VARIABLES CAPTEUR OPB815WZ
-/*
-  OPB815WZ (4 fils) -> ESP32
-  - Rouge  (Anode)     -> 3V3 via résistance 220Ω
-  - Noir   (Cathode)   -> GND
-  - Blanc  (Collector) -> GPIO27 (pull-up interne)
-  - Vert   (Emitter)   -> GND
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//VARIABLES
+#define EN      4
+#define DIR_A   16
+#define STEP_A  17
 
-  ATTENTION: Le phototransistor a besoin d'une résistance pull-up!
+#define DIR_B   15
+#define STEP_B  2
+
+// Définition des sens de rotation
+#define HORAIRE       HIGH
+#define ANTIHORAIRE   LOW
+
+#define DELAY_5SEC  5000
+#define DELAY_3SEC  3000
+#define DELAY_1SEC  1000
+
+const int SENSOR_PIN = 27;
+const int LED_PIN = 2;
+bool sensActuel = HORAIRE;
+bool test = 0;
+bool testsens = ANTIHORAIRE;
+
+// Nombre de pas pour 360° (1 tour complet)
+const int STEPS_PER_REVOLUTION = 400; //200 de base // 400 pour doubler le nombre de pas (rapport de 1/2)
+const int STEP_DELAY_US = 2000;
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//FONCTIONS (déclarations avant setup/loop pour éviter les erreurs)
+
+void attente(int duree_ms) {
+  delay(duree_ms);
+}
+
+void initMotors() {
+  pinMode(STEP_A, OUTPUT);
+  pinMode(DIR_A, OUTPUT);
+  pinMode(STEP_B, OUTPUT);
+  pinMode(DIR_B, OUTPUT);
+  pinMode(EN, OUTPUT);
+  digitalWrite(EN, HIGH);
+}
+
+void sensRotation(int dirPin, bool sens) {
+  digitalWrite(dirPin, sens);
   
-  Fonctionnement:
-  - Faisceau NON coupé -> Phototransistor passant -> GPIO27 = LOW
-  - Faisceau COUPÉ     -> Phototransistor bloqué  -> GPIO27 = HIGH (pull-up)
-*/
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//VARIABLES MOTEURS
-#define EN      4       // Pin Enable pour activer/désactiver les drivers moteurs (LOW = actif, HIGH = inactif)
-#define DIR_A   16      // Pin Direction du moteur A (définit le sens de rotation)
-#define STEP_A  17      // Pin Step du moteur A (chaque impulsion = 1 pas)
+  if (sens == HORAIRE) {
+    Serial.print("Sens: HORAIRE (PIN ");
+  } else {
+    Serial.print("Sens: ANTIHORAIRE (PIN ");
+  }
+  Serial.print(dirPin);
+  Serial.println(")");
+}
 
-#define HORAIRE       HIGH    // Rotation dans le sens des aiguilles d'une montre
-#define ANTIHORAIRE   LOW     // Rotation dans le sens inverse des aiguilles d'une montre
+void rotate360(int stepPin, int steps) {
+  for(int i = 0; i < steps; i++) {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(STEP_DELAY_US);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(STEP_DELAY_US);
+  }
+  Serial.print("Rotation complétée (");
+  Serial.print(steps);
+  Serial.println(" pas)");
+}
 
-const int STEP_DELAY_US = 2000;         // Délai entre chaque pas en microsecondes (contrôle la vitesse)
-
-//VARIABLES CAPTEUR
-const int SENSOR_PIN = 27;      // Pin GPIO du capteur OPB815WZ (entrée phototransistor)
-const int LED_PIN = 2;          // Pin GPIO de la LED indicatrice de détection
-
-// Variable pour l'état du moteur
-bool moteurEnMarche = true;     // Flag indiquant si le moteur doit tourner
+void unSeulPas(int stepPin) {
+  digitalWrite(stepPin, HIGH);
+  delayMicroseconds(STEP_DELAY_US);
+  digitalWrite(stepPin, LOW);
+  delayMicroseconds(STEP_DELAY_US);
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //SETUP
 void setup() {
-  Serial.begin(115200);               // Initialisation de la communication série
-  delay(1000);                        // Attente de 1 seconde pour stabilisation
+  Serial.begin(9600);
+  attente(DELAY_1SEC);
   
-  // Configuration des pins moteur
-  pinMode(STEP_A, OUTPUT);            // Configure STEP_A en sortie
-  pinMode(DIR_A, OUTPUT);             // Configure DIR_A en sortie
-  pinMode(EN, OUTPUT);                // Configure EN en sortie
-  digitalWrite(EN, HIGH);             // Désactive les drivers au démarrage
+  initMotors();
+  pinMode(EN, OUTPUT);
+  digitalWrite(EN, LOW);
+  attente(DELAY_1SEC);
+
+  pinMode(SENSOR_PIN, INPUT_PULLUP);
+  pinMode(LED_PIN, OUTPUT);
+  attente(DELAY_1SEC);
   
-  // Configuration du capteur
-  pinMode(SENSOR_PIN, INPUT_PULLUP);  // Configure le pin capteur en entrée avec pull-up interne
-  pinMode(LED_PIN, OUTPUT);           // Configure le pin LED en sortie
-  digitalWrite(LED_PIN, LOW);         // Éteint la LED au démarrage
-  
-  
-  // Lecture initiale du capteur
-  Serial.print("Etat initial du capteur (GPIO27): ");
-  Serial.println(digitalRead(SENSOR_PIN) ? "HIGH (faisceau coupe)" : "LOW (faisceau OK)");
-  Serial.println("");
-  
-  delay(2000);                        // Pause avant de démarrer
-  
-  // Activation des drivers moteurs
-  Serial.println(">>> Activation des drivers moteurs...");
-  digitalWrite(EN, LOW);              // Active les drivers (EN = LOW = actif)
-  delay(500);                         // Attente pour stabilisation
-  
-  // Définir le sens de rotation
-  digitalWrite(DIR_A, HORAIRE);       // Sens horaire
-  Serial.println(">>> Demarrage du moteur A en sens HORAIRE");
-  Serial.println("");
+  sensRotation(DIR_A, HORAIRE);
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -76,34 +102,23 @@ void setup() {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //LOOP
 void loop() {
-  // Lire l'état du capteur
-  // HIGH = faisceau coupé (pull-up actif car phototransistor bloqué)
-  // LOW = faisceau OK (phototransistor passant)
-  bool faisceauCoupe = (digitalRead(SENSOR_PIN) == HIGH);
   
-  if (faisceauCoupe) {
-    // Faisceau coupé -> Arrêter le moteur
-    if (moteurEnMarche) {
-      moteurEnMarche = false;
-      Serial.println("");
-      Serial.println("!!! COUPURE DETECTEE !!!");
-      Serial.println(">>> Moteur A ARRETE");
-      digitalWrite(LED_PIN, HIGH);    // Allumer la LED
-    }
+  if(digitalRead(SENSOR_PIN) == LOW) {
+    // Capteur détecté : faire un pas
+    digitalWrite(STEP_A, HIGH);
+    delayMicroseconds(STEP_DELAY_US);
+    digitalWrite(STEP_A, LOW);
+    delayMicroseconds(STEP_DELAY_US);
   } else {
-    // Faisceau OK -> Le moteur tourne
-    if (!moteurEnMarche) {
-      moteurEnMarche = true;
-      Serial.println("");
-      Serial.println(">>> FAISCEAU RETABLI !");
-      Serial.println(">>> Moteur A REDEMARRE");
-      digitalWrite(LED_PIN, LOW);     // Éteindre la LED
+    // Capteur non détecté : faire 10 pas en sens horaire
+    sensRotation(DIR_A, testsens);
+    testsens = !testsens;
+    for(int i = 0; i < 10; i++) {
+      digitalWrite(STEP_A, HIGH);
+      delayMicroseconds(STEP_DELAY_US);
+      digitalWrite(STEP_A, LOW);
+      delayMicroseconds(STEP_DELAY_US);
     }
-    
-    // Faire un pas moteur
-    digitalWrite(STEP_A, HIGH);         // Impulsion HIGH sur le pin STEP
-    delayMicroseconds(STEP_DELAY_US);   // Maintient l'impulsion
-    digitalWrite(STEP_A, LOW);          // Fin de l'impulsion
-    delayMicroseconds(STEP_DELAY_US);   // Délai avant le prochain pas
+    delay(1000);
   }
 }
