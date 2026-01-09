@@ -10,7 +10,7 @@ ESP32 project for solar tracking system with optical sensor integration. Feature
 |------|-------------|
 | `P5A-API_WIFI.ino` | WiFi connection and GET API requests with solar data processing (azimuth, altitude) |
 | `P5A-MOTEUR.ino` | Stepper motor control test for dual-axis solar tracking system (400 steps/revolution with 1:2 gear ratio) |
-| `P5A-MOTEUR-OPB815WZ.ino` | **Advanced motor control with OPB815WZ optical sensor integration** |
+| `P5A-MOTEUR-OPB815WZ.ino` | Advanced motor control with OPB815WZ optical sensor integration |
 | `P5A-OPB815WZ.ino` | Optical sensor testing and calibration |
 | `P5A-HOURREQUEST.ino` | Time synchronization and hour requests |
 
