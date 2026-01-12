@@ -1,4 +1,4 @@
-# P5A
+# P5A - TRACKEUR SOLAIRE 2 AXES
 
 ESP32 project for solar tracking system with optical sensor integration. Features stepper motor control, WiFi connectivity, and real-time sun position tracking using le-systeme-solaire.net API.
 
